@@ -1,0 +1,94 @@
+---
+alwaysApply: true
+---
+
+## Cursor Rules – Pomodoro Co-working App
+
+### 1. Project Context
+
+- Goal: minimal shared Pomodoro room where everyone works/breaks together; zero persistence, zero auth, no automated tests.
+- Stack: Next.js 16 (App Router), React 19, Tailwind v4, Radix UI, TanStack Query, Socket.IO (server + client), Zod.
+- Style: vibe-code friendly but deterministic; prioritize smallest shippable changes.
+
+### 2. Architectural Guardrails
+
+- Single shared timer per room stored in-memory via `timerHub`.
+- Server is source of truth; clients derive countdown locally from server timestamps.
+- WebSocket channel handles real-time sync; REST only for future extensions.
+- Avoid database until explicitly requested; assume server restarts wipe room state (acceptable).
+
+### 3. Conventions & Best Practices
+
+- Use absolute imports rooted at `apps/web/src`.
+- Keep files ASCII-only unless existing file already uses Unicode.
+- Prefer hooks (`useRoomSocket`, `useCountdown`) to isolate logic.
+- UI components live under `components/` with co-located styles via Tailwind classes.
+- Use Radix primitives + Tailwind for layout; keep styling minimal.
+- No automated tests unless user asks; manual verification only.
+- Keep functions small, descriptive, and typed with TypeScript.
+- Validate all network payloads with Zod before use.
+- Favor declarative React patterns; no direct DOM manipulation.
+
+### 4. Implementation Process
+
+1. Understand requirement → update `POMODORO_PLAN.md` if scope changes.
+2. Modify files with smallest necessary diff.
+3. Run relevant scripts (`pnpm dev --filter web`, `pnpm build --filter web`) only when user asks.
+4. After editing, run `read_lints` on touched files; fix new errors.
+5. Summaries in responses must cite files with backticks; no line numbers.
+
+### 5. REST API Route Rules (Next.js App Router)
+
+1. File location: `apps/web/src/app/api/{route}/route.ts`.
+2. Export HTTP verbs via functions (`GET`, `POST`, etc.).
+3. Parse request body with `await request.json()`; validate using Zod.
+4. Return `Response.json` with status codes (`200`, `400`, `500`).
+5. No long-running logic; offload to lib modules.
+6. Keep handlers stateless; rely on `timerHub` or future services for shared state.
+
+### 6. WebSocket Endpoint Rules
+
+1. Socket entrypoint: `apps/web/src/app/api/socket/route.ts`.
+2. Reuse a single Socket.IO server instance stored on `res.socket.server.io`.
+3. Events:
+   - `join`: client joins room; immediately emit `sync` with latest timer.
+   - `start`: payload `{ room, durationMs, mode }`; validate, update `timerHub`, broadcast `sync`.
+4. Never trust client times; always compute and store `Date.now()` on server.
+5. Clean up listeners on disconnect; log for debugging only (no verbose spam).
+
+### 7. Frontend Implementation Rules
+
+- Lobby page (`app/page.tsx`):
+  - Provide input/randomizer for `roomId`.
+  - Navigate with `router.push('/r/' + roomId)`.
+- Room page (`app/r/[roomId]/page.tsx`):
+  - Must import `useRoomSocket` and `useCountdown`.
+  - Display timer, mode badge, remaining progress bar, and two buttons `Start Focus`, `Start Break`.
+  - Buttons dispatch socket `start` events with hardcoded durations (25m, 5m) unless config added.
+  - Optional participant count allowed; no usernames unless spec changes.
+- Hooks:
+  - `useRoomSocket` connects once, auto-reconnects, updates TanStack Query cache.
+  - `useCountdown` recalculates remaining time every 250ms; stop when <=0.
+- Styling:
+  - Use Tailwind utility classes; keep palettes simple.
+  - Animations optional; if added, use `tw-animate-css`.
+
+### 8. Edge Case Handling
+
+- If `timerHub` lacks room state, show “Waiting to start”.
+- On reconnect, request latest `sync`.
+- Ignore redundant `start` events if timer currently running unless an explicit reset flag is provided.
+- Accept server restarts: notify users via UI toast if timer missing.
+
+### 9. Deployment & Ops
+
+- Local dev command: `pnpm dev --filter web`.
+- Production build: `pnpm build --filter web`.
+- Deploy on Vercel or Fly.io; ensure `/api/socket` path works (set `path` option on client).
+- Logging: use `console.log` sparingly for server events; remove noisy logs before merging.
+
+### 10. Communication Expectations
+
+- Always explain reasoning in responses before giving code.
+- Reference files using backticks (e.g., `app/page.tsx`).
+- If a requested change conflicts with these rules, clarify with the user before proceeding.
