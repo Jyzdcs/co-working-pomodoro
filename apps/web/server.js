@@ -144,16 +144,8 @@ const endEventSchema = {
 };
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = process.env.HOSTNAME || "0.0.0.0"; // Railway needs 0.0.0.0
+const hostname = "0.0.0.0"; // Railway handles this automatically
 const port = parseInt(process.env.PORT || "3001", 10);
-
-// Log environment for debugging
-console.log("Environment:", {
-	NODE_ENV: process.env.NODE_ENV,
-	PORT: process.env.PORT,
-	HOSTNAME: hostname,
-	port,
-});
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -396,6 +388,5 @@ app.prepare().then(() => {
 		.listen(port, hostname, () => {
 			console.log(`> Ready on http://${hostname}:${port}`);
 			console.log(`> Socket.IO available at /api/socket`);
-			console.log(`> Environment: ${dev ? "development" : "production"}`);
 		});
 });
