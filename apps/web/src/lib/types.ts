@@ -22,3 +22,18 @@ export interface StartEvent {
 export interface PauseEvent {
 	room: string;
 }
+
+export interface Participant {
+	socketId: string;
+	username: string;
+}
+
+export interface ParticipantsEvent {
+	room: string;
+	participants: Participant[];
+}
+
+export interface RenameEvent {
+	room: string;
+	username: string;
+}

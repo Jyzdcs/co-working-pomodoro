@@ -18,7 +18,12 @@ interface AvailableRoom {
 }
 
 async function fetchAvailableRooms(): Promise<AvailableRoom[]> {
-	const response = await fetch("/api/rooms");
+	// If socket server is external (Render), fetch from there
+	// Otherwise, fetch from same server (local dev or Railway full deploy)
+	const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "";
+	const apiUrl = socketUrl ? `${socketUrl}/api/rooms` : "/api/rooms";
+	
+	const response = await fetch(apiUrl);
 	const data = await response.json();
 	return data.rooms || [];
 }

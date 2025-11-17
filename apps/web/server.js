@@ -18,15 +18,22 @@ const timerHub = {
 	},
 };
 
-// Track room participants
+// Track room participants with usernames
 const roomParticipants = {
-	rooms: new Map(), // roomId -> Set of socket IDs
-	addParticipant(roomId, socketId) {
+	// roomId -> Map of socketId -> { socketId, username }
+	rooms: new Map(),
+	
+	addParticipant(roomId, socketId, username = null) {
 		if (!this.rooms.has(roomId)) {
-			this.rooms.set(roomId, new Set());
+			this.rooms.set(roomId, new Map());
 		}
-		this.rooms.get(roomId).add(socketId);
+		const defaultUsername = username || `User ${socketId.substring(0, 6)}`;
+		this.rooms.get(roomId).set(socketId, {
+			socketId,
+			username: defaultUsername,
+		});
 	},
+	
 	removeParticipant(roomId, socketId) {
 		const participants = this.rooms.get(roomId);
 		if (participants) {
@@ -36,9 +43,24 @@ const roomParticipants = {
 			}
 		}
 	},
+	
+	updateUsername(roomId, socketId, username) {
+		const participants = this.rooms.get(roomId);
+		if (participants && participants.has(socketId)) {
+			participants.get(socketId).username = username || `User ${socketId.substring(0, 6)}`;
+		}
+	},
+	
+	getParticipants(roomId) {
+		const participants = this.rooms.get(roomId);
+		if (!participants) return [];
+		return Array.from(participants.values());
+	},
+	
 	getParticipantCount(roomId) {
 		return this.rooms.get(roomId)?.size ?? 0;
 	},
+	
 	getAvailableRooms() {
 		const rooms = [];
 		for (const [roomId, participants] of this.rooms.entries()) {
@@ -59,6 +81,18 @@ const joinEventSchema = {
 			throw new Error("Invalid room");
 		}
 		return { room: data.room };
+	},
+};
+
+const renameEventSchema = {
+	parse: (data) => {
+		if (!data || typeof data.room !== "string" || data.room.length === 0) {
+			throw new Error("Invalid room");
+		}
+		if (typeof data.username !== "string") {
+			throw new Error("Invalid username");
+		}
+		return { room: data.room, username: data.username };
 	},
 };
 
@@ -110,7 +144,7 @@ const endEventSchema = {
 };
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = "localhost";
+const hostname = process.env.HOSTNAME || "0.0.0.0"; // Railway needs 0.0.0.0
 const port = parseInt(process.env.PORT || "3001", 10);
 
 const app = next({ dev, hostname, port });
@@ -165,16 +199,43 @@ app.prepare().then(() => {
 					participants: roomParticipants.getParticipantCount(room),
 				});
 
-				// Broadcast participant count to all in room
+				// Broadcast participant list to all in room
 				io.to(room).emit("participants", {
 					room,
-					count: roomParticipants.getParticipantCount(room),
+					participants: roomParticipants.getParticipants(room),
 				});
 
 				console.log(`Client ${socket.id} joined room: ${room}`);
 			} catch (error) {
 				console.error("Invalid join event:", error);
 				socket.emit("error", { message: "Invalid join payload" });
+			}
+		});
+
+		socket.on("rename", (data) => {
+			try {
+				const { room, username } = renameEventSchema.parse(data);
+				if (!username || username.trim().length === 0) {
+					socket.emit("error", { message: "Username cannot be empty" });
+					return;
+				}
+				if (username.length > 30) {
+					socket.emit("error", { message: "Username too long (max 30 chars)" });
+					return;
+				}
+
+				roomParticipants.updateUsername(room, socket.id, username.trim());
+
+				// Broadcast updated participant list to all in room
+				io.to(room).emit("participants", {
+					room,
+					participants: roomParticipants.getParticipants(room),
+				});
+
+				console.log(`Client ${socket.id} renamed to "${username.trim()}" in room ${room}`);
+			} catch (error) {
+				console.error("Invalid rename event:", error);
+				socket.emit("error", { message: "Invalid rename payload" });
 			}
 		});
 
@@ -308,10 +369,10 @@ app.prepare().then(() => {
 			for (const [roomId, participants] of roomParticipants.rooms.entries()) {
 				if (participants.has(socket.id)) {
 					roomParticipants.removeParticipant(roomId, socket.id);
-					// Broadcast updated participant count
+					// Broadcast updated participant list
 					io.to(roomId).emit("participants", {
 						room: roomId,
-						count: roomParticipants.getParticipantCount(roomId),
+						participants: roomParticipants.getParticipants(roomId),
 					});
 				}
 			}
@@ -324,7 +385,8 @@ app.prepare().then(() => {
 			console.error(err);
 			process.exit(1);
 		})
-		.listen(port, () => {
+		.listen(port, hostname, () => {
 			console.log(`> Ready on http://${hostname}:${port}`);
+			console.log(`> Socket.IO available at /api/socket`);
 		});
 });
