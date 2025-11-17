@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useRoomSocket } from "@/hooks/useRoomSocket";
 import { useCountdown } from "@/hooks/useCountdown";
@@ -55,6 +56,23 @@ export default function RoomPage() {
 
 	const durationMs = mode === "focus" ? FOCUS_DURATION_MS : BREAK_DURATION_MS;
 	const progress = formatProgress(remainingMs, durationMs);
+
+	// Update browser tab title with timer
+	useEffect(() => {
+		if (mode && remainingMs !== null) {
+			const timeStr = formatTime(remainingMs);
+			const modeStr = mode === "focus" ? "Focus" : "Break";
+			const statusStr = isPaused ? "⏸ " : "";
+			document.title = `${statusStr}${timeStr} - ${modeStr} | Pomodoro`;
+		} else {
+			document.title = "Pomodoro Co-working";
+		}
+
+		// Cleanup on unmount
+		return () => {
+			document.title = "Pomodoro Co-working";
+		};
+	}, [remainingMs, mode, isPaused]);
 
 	return (
 		<div className="container mx-auto max-w-3xl px-4 py-8">
