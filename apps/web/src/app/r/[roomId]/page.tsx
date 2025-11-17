@@ -1,11 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRoomSocket } from "@/hooks/useRoomSocket";
 import { useCountdown } from "@/hooks/useCountdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Timer, Coffee, Pause, Play, RotateCcw, Square } from "lucide-react";
 
 const FOCUS_DURATION_MS = 25 * 60 * 1000; // 25 minutes
@@ -136,24 +147,58 @@ export default function RoomPage() {
 									Pause
 								</Button>
 								<div className="flex gap-2">
-									<Button
-										onClick={handleRestart}
-										className="flex-1"
-										size="lg"
-										variant="outline"
-									>
-										<RotateCcw className="mr-2 size-4" />
-										Restart
-									</Button>
-									<Button
-										onClick={handleEnd}
-										className="flex-1"
-										size="lg"
-										variant="destructive"
-									>
-										<Square className="mr-2 size-4" />
-										End
-									</Button>
+									<AlertDialog>
+										<AlertDialogTrigger asChild>
+											<Button
+												className="flex-1"
+												size="lg"
+												variant="outline"
+											>
+												<RotateCcw className="mr-2 size-4" />
+												Restart
+											</Button>
+										</AlertDialogTrigger>
+										<AlertDialogContent>
+											<AlertDialogHeader>
+												<AlertDialogTitle>Restart Timer?</AlertDialogTitle>
+												<AlertDialogDescription>
+													Are you sure you want to restart the timer? This will reset it to the beginning.
+												</AlertDialogDescription>
+											</AlertDialogHeader>
+											<AlertDialogFooter>
+												<AlertDialogCancel>Cancel</AlertDialogCancel>
+												<AlertDialogAction onClick={handleRestart}>
+													Restart
+												</AlertDialogAction>
+											</AlertDialogFooter>
+										</AlertDialogContent>
+									</AlertDialog>
+									<AlertDialog>
+										<AlertDialogTrigger asChild>
+											<Button
+												className="flex-1"
+												size="lg"
+												variant="destructive"
+											>
+												<Square className="mr-2 size-4" />
+												End
+											</Button>
+										</AlertDialogTrigger>
+										<AlertDialogContent>
+											<AlertDialogHeader>
+												<AlertDialogTitle>End Timer?</AlertDialogTitle>
+												<AlertDialogDescription>
+													Are you sure you want to end the timer? This will stop it completely and clear it for everyone in the room.
+												</AlertDialogDescription>
+											</AlertDialogHeader>
+											<AlertDialogFooter>
+												<AlertDialogCancel>Cancel</AlertDialogCancel>
+												<AlertDialogAction onClick={handleEnd} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+													End Timer
+												</AlertDialogAction>
+											</AlertDialogFooter>
+										</AlertDialogContent>
+									</AlertDialog>
 								</div>
 							</div>
 						) : mode && isPaused ? (
@@ -168,24 +213,58 @@ export default function RoomPage() {
 									Resume
 								</Button>
 								<div className="flex gap-2">
-									<Button
-										onClick={handleRestart}
-										className="flex-1"
-										size="lg"
-										variant="outline"
-									>
-										<RotateCcw className="mr-2 size-4" />
-										Restart
-									</Button>
-									<Button
-										onClick={handleEnd}
-										className="flex-1"
-										size="lg"
-										variant="destructive"
-									>
-										<Square className="mr-2 size-4" />
-										End
-									</Button>
+									<AlertDialog>
+										<AlertDialogTrigger asChild>
+											<Button
+												className="flex-1"
+												size="lg"
+												variant="outline"
+											>
+												<RotateCcw className="mr-2 size-4" />
+												Restart
+											</Button>
+										</AlertDialogTrigger>
+										<AlertDialogContent>
+											<AlertDialogHeader>
+												<AlertDialogTitle>Restart Timer?</AlertDialogTitle>
+												<AlertDialogDescription>
+													Are you sure you want to restart the timer? This will reset it to the beginning.
+												</AlertDialogDescription>
+											</AlertDialogHeader>
+											<AlertDialogFooter>
+												<AlertDialogCancel>Cancel</AlertDialogCancel>
+												<AlertDialogAction onClick={handleRestart}>
+													Restart
+												</AlertDialogAction>
+											</AlertDialogFooter>
+										</AlertDialogContent>
+									</AlertDialog>
+									<AlertDialog>
+										<AlertDialogTrigger asChild>
+											<Button
+												className="flex-1"
+												size="lg"
+												variant="destructive"
+											>
+												<Square className="mr-2 size-4" />
+												End
+											</Button>
+										</AlertDialogTrigger>
+										<AlertDialogContent>
+											<AlertDialogHeader>
+												<AlertDialogTitle>End Timer?</AlertDialogTitle>
+												<AlertDialogDescription>
+													Are you sure you want to end the timer? This will stop it completely and clear it for everyone in the room.
+												</AlertDialogDescription>
+											</AlertDialogHeader>
+											<AlertDialogFooter>
+												<AlertDialogCancel>Cancel</AlertDialogCancel>
+												<AlertDialogAction onClick={handleEnd} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+													End Timer
+												</AlertDialogAction>
+											</AlertDialogFooter>
+										</AlertDialogContent>
+									</AlertDialog>
 								</div>
 							</div>
 						) : (
